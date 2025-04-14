@@ -13,16 +13,7 @@ from download_card_sets import download_missing_card_sets, delete_card_sets
 
 download_missing_card_sets()
 
-isPvp = len(sys.argv) != 2 or sys.argv[-1].lower() != "nopvp"
-print("PvP Mode" if isPvp else "Playing against AI...")
-
 state_machine = StateMachine()
-
-print("Starting bot...")
-bot = Bot(state_machine, pvp=isPvp)
-bot_thread = threading.Thread(target=bot.run)
-bot_thread.daemon = True
-bot_thread.start()
 
 sleep(0.1)  # Necessary if we want to call get_window_info_frames now
 
@@ -35,9 +26,22 @@ api_caller = APICaller()
 api_thread = threading.Thread(target=api_caller.call_api)
 api_thread.daemon = True
 api_thread.start()
+print("Ready.")
 
 while True:
+    
+    # Missing: mana values, nexus health, card stats, game state
+    print("Fetching info...")
+    print("Getting game data...")
     state_machine.set_game_data(api_caller.get_game_data())
     state_machine.set_cards_data(api_caller.get_cards_data())
     state_machine.set_game_result(api_caller.get_game_result())
-    sleep(0.4)
+    print("Getting cards on board...")
+    game_state, cards_on_board, deck_type, n_games, games_won = state_machine.get_game_info()
+    print(game_state)
+    for card_area, cards in cards_on_board.items():
+        print(card_area)
+        for card in cards:
+            print(card)
+    print("Done.")
+    sleep(.5)

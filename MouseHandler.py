@@ -4,7 +4,7 @@ from time import sleep
 
 
 class MouseHandler:
-    def __init__(self, smooth_factor=40, sleep_duration=0.01) -> None:
+    def __init__(self, smooth_factor=15, sleep_duration=0.01) -> None:
         self.smooth_factor = smooth_factor
         self.sleep_duration = sleep_duration
 

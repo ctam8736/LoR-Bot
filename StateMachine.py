@@ -63,6 +63,7 @@ class StateMachine:
                 window_info[i] = r
 
     def get_game_info(self, call_game_state=True) -> tuple:
+        print("\nCalling get_game_info...")
         # Get window data
         win32gui.EnumWindows(self._update_window_info, self.window_info)
         self.window_x, self.window_y, self.window_width, self.window_height = self.window_info[0], self.window_info[
@@ -74,9 +75,11 @@ class StateMachine:
         image = self.frames[-1]
 
         self._get_cards_on_board()
+        print("Getting game state...")
         if call_game_state:
             self.game_state = self._get_game_state(self.frames, image)
 
+        print(f"Success! Game state is {self.game_state}")
         return tuple((self.game_state, self.cards_on_board, self.deck_type, self.n_games, self.games_won))
 
     def get_window_info_frames(self) -> tuple:
@@ -144,8 +147,6 @@ class StateMachine:
         self.cards_on_board = cards_on_board
 
     def _get_game_state(self, frames, image) -> str:
-        if keyboard.is_pressed("ctrl"):
-            return GameState.Hold
 
         if self.game_result:
             self._get_deck_type()
@@ -205,7 +206,7 @@ class StateMachine:
                               for _ in range(num_cards))
             if any("Ephemeral" in card.keywords for card in self.deck):
                 self.deck_type = DeckType.Ephemeral
-            elif any(card.get_name() == "Gangplank" for card in self.deck):
+            elif any(card.get_name() == "Miss Fortune" for card in self.deck):
                 self.deck_type = DeckType.Pirates
             else:
                 self.deck_type = DeckType.Generic

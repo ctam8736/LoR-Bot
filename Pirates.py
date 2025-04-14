@@ -5,7 +5,24 @@ class Pirates(Strategy):
     def __init__(self, mouse_handler):
         super().__init__(mouse_handler)
         self.mulligan_cards = ("Crackshot Corsair", "Legion Rearguard",
-                               "Legion Saboteur", "Precious Pet", "Prowling Cutthroat")
+                               "Legion Saboteur", "Precious Pet", "Jagged Butcher")
+
+        self.card_priorities = [
+            "Darius",
+            "Captain Farron",
+            "Legion Rearguard",
+            "Legion Grenadier",
+            "Iron Ballista",
+            "Miss Fortune",
+            "Precious Pet",
+            "Jagged Butcher",
+            "Marai Warden",
+            "Crackshot Corsair",
+            "Legion Saboteur",
+            "Arena Battlecaster",
+            "Imperial Demolitionist",
+            "Decimate"
+        ]
 
     def block(self, cards_on_board, window_x, window_y, window_height):
         self.window_x = window_x
@@ -19,7 +36,7 @@ class Pirates(Strategy):
                     break
 
         for i, blocking_card in enumerate(cards_on_board["cards_board"]):
-            if i < self.block_counter or "Can't Block" in blocking_card.keywords or "Immobile" in blocking_card.keywords or blocking_card.get_name() == "Crackshot Corsair":
+            if i < self.block_counter or "Can't Block" in blocking_card.keywords or "Immobile" in blocking_card.keywords:
                 continue
             if self.blocked_with(blocking_card, cards_on_board["opponent_cards_attk"], cards_on_board["cards_attk"]):
                 self.block_counter = (self.block_counter + 1) % len(cards_on_board["cards_board"])
@@ -29,13 +46,13 @@ class Pirates(Strategy):
         return False
 
     def playable_card(self, playable_cards, game_state, cards_on_board):
-        cards_sorted = sorted(playable_cards, key=lambda playable_card: playable_card.cost, reverse=True)
+        cards_sorted = sorted(playable_cards, key=lambda card: self.card_priorities.index(card.name) if card.name in self.card_priorities else float('inf'))
         n_cards_on_board = len(cards_on_board["cards_board"])
         for playable_card_in_hand in cards_sorted:
             name = playable_card_in_hand.get_name()
             n_summon = 2 if "summon a" in playable_card_in_hand.description_raw.lower() else 1
             all_1hp_or_lower = len(cards_on_board["cards_board"]) != 0 and all(unit.health <= 1 for unit in cards_on_board["cards_board"])
-            if name == "Imperial Demolist" and all_1hp_or_lower \
+            if name == "Imperial Demolitionist" and all_1hp_or_lower \
                 or n_cards_on_board + n_summon > 6 \
                     or all(card.get_name() != name for card in self.deck) \
             or name == "Parrley" or name == "Make it Rain" and len(cards_on_board["opponent_cards_board"]) < 2:

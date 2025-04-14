@@ -2,6 +2,7 @@ import cv2
 import constants
 import numpy as np
 import keyboard
+import time
 from time import sleep
 from StateMachine import DeckType
 from constants import GameState
@@ -24,7 +25,7 @@ NUM_PX_MASK = tuple(sum(val for line in mask for val in line) for mask in MANA_M
 
 
 class Bot:
-    """Plays the game, responisble for executing commands from DeckStrategy"""
+    """Plays the game, responsible for executing commands from DeckStrategy"""
 
     def __init__(self, state_machine, pvp=True):
         self.state_machine = state_machine
@@ -50,6 +51,7 @@ class Bot:
         self.first_pass_blocking = False
         self.first_pass_spell = False
         self.mouse_handler = MouseHandler()
+        self.game_start_time = None
 
     def _get_mana(self, frames):
         # Magic
@@ -85,13 +87,16 @@ class Bot:
 
     def run(self):
         while True:
-            (
-                self.game_state,
-                self.cards_on_board,
-                self.deck_type,
-                self.n_games,
-                self.games_won,
-            ) = self.state_machine.get_game_info()
+            try:
+                (
+                    self.game_state,
+                    self.cards_on_board,
+                    self.deck_type,
+                    self.n_games,
+                    self.games_won,
+                ) = self.state_machine.get_game_info()
+            except Exception as e:
+                print(f"Error...{e}")
 
             if isinstance(self.deck_type, DeckType) and self.deck_strategy is None:
                 # Create a new DeckStrategy object from DeckType
@@ -103,8 +108,13 @@ class Bot:
                     self.deck_strategy.set_deck(tuple(self.state_machine.get_deck()))
 
             if self.game_state == GameState.End:
-                print("Game ended... waiting for animations")
-                sleep(16)
+                with open("results.txt", "a") as f:
+                    f.write(f"Game ended...record = {self.games_won}/{self.n_games} ({(self.games_won * 100/self.n_games):.2f}%) wins.\n")
+                    f.write(f"Game time: {(time.time() - self.game_start_time):.4f} seconds\n")
+                print(f"Game ended...record = {self.games_won}/{self.n_games} wins.")
+                print(f"Game time: {(time.time() - self.game_start_time):.4f} seconds")
+                print("Waiting for animations...")
+                sleep(25)
 
                 # Reset variables
                 self.mana = self.prev_mana = self.turn = 1
@@ -154,11 +164,11 @@ class Bot:
         if self.game_state == GameState.Menus:
             print("Selecting deck")
             self.select_deck()
-            sleep(5)
+            sleep(1)
             return False
         if self.mana == -1:
             print("Unknown mana...")
-            sleep(4)
+            sleep(.5)
             return False
         if self.mana > self.turn:  # New turn
             self.spell_mana = min(self.spell_mana + self.prev_mana, 3)
@@ -170,13 +180,20 @@ class Bot:
         return True
 
     def play(self):
+        print(f"New play step: {self.prev_mana} unit mana, {self.spell_mana} spell mana")
+
         in_game_cards = [
             card for cards in self.cards_on_board.values() for card in cards
         ]
 
         if self.game_state == GameState.Mulligan:
+
+            self.game_start_time = time.time()
+
+            with open("results.txt", "a") as f:
+                f.write(f"New opponent: {self.state_machine.game_data['OpponentName']}\n")
+
             print("Thinking about mulligan...")
-            sleep(10)
 
             # Get cards_on_board again, since they might have updated
             (
@@ -199,23 +216,28 @@ class Bot:
             print("Confirming mulligan")
             keyboard.send("space")
 
-            sleep(8)
+            sleep(5)
+
         elif self.game_state == GameState.Opponent_Turn:
-            sleep(3)
+
+            print("It's the opponent's turn...sleeping...")
+            sleep(.5)
             return
+
         elif self.game_state == GameState.Blocking:
+
             # Double check to avoid False Positives (card draw animation, card play animation...)
             if not self.first_pass_blocking:
                 self.first_pass_blocking = True
-                print("first blocking pass...")
-                sleep(5)
+                print("First blocking pass...")
+                sleep(2)
                 return
 
+            print("Declaring blocks according to strategy...")
             block_counter = 0
             while block_counter < 12 and self.deck_strategy.block(
                 self.cards_on_board, self.window_x, self.window_y, self.window_height
             ):
-                sleep(2)
                 (
                     self.game_state,
                     self.cards_on_board,
@@ -225,26 +247,33 @@ class Bot:
                 ) = self.state_machine.get_game_info(call_game_state=False)
 
                 block_counter += 1
+                print("Made a block...")
+                sleep(1)
 
             keyboard.send("space")
-            sleep(10)
+            sleep(.5)
+
         elif (
             self.game_state == GameState.Defend_Turn
             or self.game_state == GameState.Attack_Turn
         ):
+
+            # Spells on stack...
             if len(self.cards_on_board["spell_stack"]) != 0 and all(
                 (card.is_spell() or card.is_ability())
                 for card in self.cards_on_board["spell_stack"]
             ):
                 # Double check to avoid False Positives
                 if not self.first_pass_spell:
+                    print("I think spells are on the stack...double checking...")
                     self.first_pass_spell = True
-                    print("first spell pass...")
-                    sleep(12)
+                    sleep(2)
                     return
+                print("Spells are on the stack, letting it through...")
                 keyboard.send("space")
-                sleep(4)
+                sleep(5)
                 return
+
             playable_cards = sorted(
                 filter(
                     lambda card: card.cost <= self.mana
@@ -255,15 +284,20 @@ class Bot:
                 key=lambda card: card.cost,
                 reverse=True,
             )
+
             if (
                 len(playable_cards) == 0
                 and self.game_state == GameState.Attack_Turn
                 or len(self.cards_on_board["cards_board"]) == 6
             ):
+                print("Readying an attack, just all-in...")
                 keyboard.send("a")
+                sleep(2)
+                keyboard.send("space")
 
+                """
                 # Sleep so API gets called again and get cards_on_board info
-                sleep(1.25)
+                sleep(1.2)
                 (
                     self.game_state,
                     self.cards_on_board,
@@ -276,9 +310,9 @@ class Bot:
                     self.cards_on_board,
                     self.window_x,
                     self.window_y,
-                    self.window_height,
+                    self.window_height, 
                 ):
-                    sleep(1.25)
+                    sleep(.5)
                     (
                         self.game_state,
                         self.cards_on_board,
@@ -286,9 +320,10 @@ class Bot:
                         self.n_games,
                         self.games_won,
                     ) = self.state_machine.get_game_info(call_game_state=False)
+                """
 
-                keyboard.send("space")
             else:
+                print("Playing some cards from hand...")
                 playable_card_in_hand = self.deck_strategy.playable_card(
                     playable_cards, self.game_state, self.cards_on_board
                 )
@@ -296,9 +331,9 @@ class Bot:
                     print("Playing card: ", playable_card_in_hand)
                     self.play_card(playable_card_in_hand)
 
-                    # Grant/Pick an ally in hand mechanic
+                    # target ally in hand
                     if "ally in hand" in playable_card_in_hand.description_raw:
-                        sleep(1.25)
+                        sleep(.75)
                         (
                             self.game_state,
                             self.cards_on_board,
@@ -325,7 +360,8 @@ class Bot:
                                 + self.window_height
                                 - card_to_click.top_center[1],
                             )
-                    # Imperial Demolist play effect
+                    
+                    # target ally on board
                     elif (
                         "to an ally" in playable_card_in_hand.description_raw
                         and len(self.cards_on_board["cards_board"]) != 0
@@ -342,13 +378,8 @@ class Bot:
                                 break
                         else:
                             keyboard.send("space")
-                    elif playable_card_in_hand.get_name() == "Petty Officer":
-                        sleep(0.75)
-                        self.mouse_handler.click(
-                            self.window_x + 4 * self.window_width // 7,
-                            self.window_y + self.window_height // 2,
-                        )
-                        sleep(1)
+                    
+                    # removed: multi-choice
 
                     if "Attune" in playable_card_in_hand.keywords:
                         self.spell_mana = min(3, self.spell_mana + 1)
@@ -360,29 +391,13 @@ class Bot:
                         )
 
                     # Get new mana
-                    sleep(1.25)
                     while True:
                         self._get_mana(self.state_machine.request_frames())
                         if self.mana != -1:
                             break
                     self.prev_mana = self.mana
-                else:
-                    if self.game_state == GameState.Attack_Turn:
-                        keyboard.send("a")
 
-                        # Sleep so API gets called again and get cards_on_board info
-                        sleep(1.25)
-                        (
-                            self.game_state,
-                            self.cards_on_board,
-                            self.deck_type,
-                            self.n_games,
-                            self.games_won,
-                        ) = self.state_machine.get_game_info(call_game_state=False)
-                        sleep(1)
-
-                    keyboard.send("space")
-        sleep(4)
+        sleep(1)
 
     def play_card(self, card):
         (x, y) = (
@@ -390,14 +405,11 @@ class Bot:
             self.window_y + self.window_height - card.top_center[1],
         )
         self.mouse_handler.move_mouse_smooth(x, y)
-        sleep(0.5)  # Wait for the card maximize animation
         self.mouse_handler.hold(x, y)
         self.mouse_handler.move_mouse_smooth(x, int(y - 3 * self.window_height / 7))
-        sleep(0.3)
         self.mouse_handler.release(x, int(y - 3 * self.window_height / 7))
-        sleep(0.3)
         if card.is_spell():
-            sleep(1)
+            sleep(1.2)
             keyboard.send("space")
 
     def select_deck(self):

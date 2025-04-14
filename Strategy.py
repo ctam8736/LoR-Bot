@@ -72,8 +72,7 @@ class Strategy:
             if "Elusive" in enemy_card.keywords or "Fearsome" in enemy_card.keywords and blocking_card.attack < 3:
                 continue
             is_blockable = True
-            # if enemy_card.health <= blocking_card.attack:  # Aggressive block
-            if enemy_card.attack < blocking_card.health:  # Defensive block
+            if enemy_card.health <= blocking_card.attack or enemy_card.attack < blocking_card.health:  # Defensive block
                 for ally_card in ally_cards:  # Check if card is already blocked
                     if abs(ally_card.get_pos()[0] - enemy_card.get_pos()[0]) < 10:
                         is_blockable = False

@@ -15,8 +15,11 @@ def delete_card_sets():
         print(f"Folder '{CARD_SET_FOLDER}' not found, skipping delete...")
 
 def download_missing_card_sets():
-    if not os.path.isdir("card_sets"):  # Entire folder is missing -> create one
-        os.mkdir("card_sets")
+    if os.path.isdir("card_sets"):
+        print("Card Sets Found!")
+        return
+    
+    os.mkdir("card_sets")
     (_, _, card_set_files) = next(os.walk("card_sets"))
     curr_sets_nums = set(map(lambda card_set: int(card_set[3]), card_set_files))
     set_num = len(curr_sets_nums)

@@ -1,0 +1,23 @@
+New opponent: decks_badstuns_name
+New opponent: decks_badstuns_name
+Game ended...record = 1/1 (100.00%) wins.
+Game time: 187.4417 seconds
+New opponent: decks_easythresh_name
+Game ended...record = 0/1 (0.00%) wins.
+Game time: 171.8330 seconds
+New opponent: decks_easybraum_name
+New opponent: decks_easybraum_name
+New opponent: deckname_kinkou_keepers
+New opponent: deckname_kinkou_keepers
+Game ended...record = 0/1 (0.00%) wins.
+Game time: 333.5193 seconds
+New opponent: decks_set2_bilge_name
+New opponent: decks_set2_bilge_name
+New opponent: decks_mediumdraven_name
+Game ended...record = 0/1 (0.00%) wins.
+Game time: 164.6424 seconds
+New opponent: 5B_I_BC_Kennen_Ahri_Total
+New opponent: decks_badspellbound_name
+Game ended...record = 1/1 (100.00%) wins.
+Game time: 270.2569 seconds
+New opponent: decks_badscars_name
